@@ -5,6 +5,7 @@ reflex-platform.project ({ pkgs, ... }: {
     common = ./common;
     backend = ./backend;
     frontend = ./frontend;
+    reflex-chartjs = ./reflex-chartjs;
   };
 
   android.frontend = {
@@ -20,7 +21,7 @@ reflex-platform.project ({ pkgs, ... }: {
   };
 
   shells = {
-    ghc = ["common" "backend" "frontend"];
-    ghcjs = ["common" "frontend"];
+    ghc = ["common" "backend" "frontend" "reflex-chartjs"];
+    ghcjs = ["common" "frontend" "reflex-chartjs"];
   };
 })

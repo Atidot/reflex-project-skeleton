@@ -2,3 +2,5 @@ packages:
   common/
   backend/
   frontend/
+  reflex-chartjs/
+
