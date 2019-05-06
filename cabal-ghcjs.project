@@ -3,3 +3,4 @@ packages:
   common/
   frontend/
   reflex-chartjs/
+  reflex-jexcel/

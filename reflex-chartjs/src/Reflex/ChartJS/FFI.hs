@@ -4,33 +4,21 @@
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 module Reflex.ChartJS.FFI where
 
-{-import Control.Monad.IO.Class-}
-{-import Control.Concurrent-}
-{-import Data.ByteString.Char8 (ByteString, unpack)-}
-import "aeson"       Data.Aeson (toJSON)
-import "jsaddle"     Language.Javascript.JSaddle
-{-import "ghcjs-dom-jsffi"        GHCJS.DOM.Types (IsElement)-}
-{-import "ghcjs-dom-jsffi"        GHCJS.DOM.Types (IsElement)-}
-import GHCJS.DOM.Element -- (IsElement)
-{-import "ghcjs-base"       GHCJS.Types (JSVal)-}
-{-import "ghcjs-base"       GHCJS.Marshal (toJSVal_aeson)-}
-{-import "ghcjs-base"       GHCJS.Foreign.Callback (Callback, syncCallback1', syncCallback1, OnBlocked(..))-}
-{-import "ghcjs-dom-jsffi"  GHCJS.DOM.Types (unElement)-}
-{-import "ghcjs-dom-jsffi"  GHCJS.DOM.Element (IsElement, toElement)-}
-import                    Reflex.ChartJS.Types
-import Control.Lens hiding (element, (#))
-{-import "file-embed" Data.FileEmbed (embedFile)-}
+import             Prelude hiding ((!!))
+import "lens"      Control.Lens hiding (element, (#))
+import "aeson"     Data.Aeson (toJSON)
+import "jsaddle"   Language.Javascript.JSaddle
+import             GHCJS.DOM.Element (IsElement, toElement, unElement)
+import             Reflex.ChartJS.Types
 
 newtype ChartJsRef = ChartJsRef
                    { unChartJsRef :: JSVal
                    }
 
 
-{-chartJsSource :: ByteString-}
-{-chartJsSource = $(embedFile "jsbits/chart.js")-}
 
 
---
+
 newChart :: (IsElement element)
          => element
          -- ^ Element to use
@@ -44,12 +32,7 @@ newChart element
          callbacks = do
     let js_element  = unElement . toElement  $ element
     let js_chart = toJSON $ chartJs_
-    {-_ <- eval $ unpack chartJsSource-}
     chart <- nextAnimationFrame $ \_ -> new (jsg "Chart") (js_element, js_chart)
-    {-chart <- jsg "Chart"-}
-    w <- jsg "console"
-    _ <- w ^. js1 "log" chart
-    {-chart <- jsg "console"-}
     return $ ChartJsRef chart
     {-js_xFormatter <- case _chartJsCallbacks_xAxisFormatter callbacks of-}
                             {-Just formatter -> syncCallback1' formatter-}
@@ -128,7 +111,7 @@ newChart element
                 {--- ^ tooltip Formatter-}
                 {--> IO ChartJsRef-}
 
---
+
 update :: ChartJsRef
        -- ^ ChartJs ref
        -> ChartJs
@@ -137,87 +120,72 @@ update :: ChartJsRef
 update ref chartJs_ = do
     chart <- valToObject . unChartJsRef $ ref
     (chart <# "type") (toJSON . _chartJs_type $ chartJs_)
+
     data' <- chart ^. js "data"
     (data' <# "datasets") (toJSON . _chartJsData_datasets . _chartJs_data $ chartJs_)
+    (data' <# "labels")   (toJSON . _chartJsData_labels   . _chartJs_data $ chartJs_)
+
     _ <- chart # "update" $ ()
     return ()
-    {-js_chartJs  <- toJSVal_aeson chartJs_-}
-    {-js_update ref js_chartJs-}
 
-{-foreign import javascript unsafe-}
-    {-"(function() {                                  \-}
-    {-\    $1.type = $2.type;                         \-}
-    {-\    $1.data.datasets = $2.data.datasets;       \-}
-    {-\    if ($2.data.labels !== undefined) {        \-}
-    {-\       $1.data.labels = $2.data.labels;}       \-}
-    {-\    $1.update();                               \-}
-    {-\})()"-}
-    {-js_update :: ChartJsRef-}
-              {--- ^ ChartJs ref-}
-              {--> JSVal-}
-              {--- ^ ChartJs Data-}
-              {--> IO ()-}
 
---
 destroy :: ChartJsRef
         -> JSM ()
 destroy ref = do
-    undefined
-    {-js_destroy ref-}
+    chart <- valToObject . unChartJsRef $ ref
+    _ <- chart ^. js1 "destroy" ()
+    return ()
 
-{-foreign import javascript unsafe-}
-    {-"$1.destroy()"-}
-    {-js_destroy :: ChartJsRef-}
-               {--> IO ()-}
 
---
+
 clear :: ChartJsRef
       -> JSM ()
 clear ref = do
-    undefined
-    {-js_clear ref-}
+    chart <- valToObject . unChartJsRef $ ref
+    _ <- chart ^. js1 "clear" ()
+    return ()
 
-{-foreign import javascript unsafe-}
-    {-"$1.clear()"-}
-    {-js_clear :: ChartJsRef-}
-             {--> IO ()-}
 
---
+
 registerOnClick :: (IsElement el)
                 => el
                 -> ChartJsRef
-                -> (JSVal -> IO ())
+                -> (ChartJsSelection -> JSM ())
                 -> JSM ()
 registerOnClick element_ chartJsRef callback = do
-    undefined
-    {-let js_element = unElement . toElement $ element_-}
-    {-js_onclick <- syncCallback1 ContinueAsync callback-}
-    {-js_registerOnClick js_element-}
-                       {-chartJsRef-}
-                       {-js_onclick-}
+    let js_element = unElement . toElement $ element_
+    chart <- valToObject . unChartJsRef $ chartJsRef
 
-{-foreign import javascript unsafe-}
-    {-"(function() {                                                     \-}
-    {-\ $1.onclick = function(evt){                                      \-}
-    {-\   var activePoints  = $2.getElementsAtEvent(evt);                \-}
-    {-\   if (activePoints === undefined) { return; }                    \-}
-    {-\   if (0 == activePoints.length) { return; }                      \-}
-    {-\                                                                  \-}
-    {-\   var datasetLabel = activePoints[0]._model.datasetLabel;        \-}
-    {-\   var datasetIndex = activePoints[0]._datasetIndex;              \-}
-    {-\   var label        = activePoints[0]._model.label;               \-}
-    {-\   var index        = activePoints[0]._index;                     \-}
-    {-\   var value        = $2.data.datasets[datasetIndex].data[index]; \-}
-    {-\                                                                  \-}
-    {-\   $3(JSON.stringify( { 'datasetLabel': datasetLabel              \-}
-    {-\                      , 'datasetIndex': datasetIndex              \-}
-    {-\                      , 'label':        label                     \-}
-    {-\                      , 'index':        index                     \-}
-    {-\                      , 'value':        value                     \-}
-    {-\                      }));                                        \-}
-    {-\};                                                                \-}
-    {-\})()"-}
-    {-js_registerOnClick :: JSVal-}
-                       {--> ChartJsRef-}
-                       {--> Callback (JSVal -> IO ())-}
-                       {--> IO ()-}
+    js_element ^. jss "onclick" (fun $ \_ _ [evt] -> do
+        activePoints <- chart ^. js1 "getElementsAtEvent" evt
+        isUndefined' <- valIsUndefined activePoints
+        if isUndefined'
+        then return ()
+        else do
+            length' <- activePoints ^. js "length" >>= valToNumber
+            if 0 == length'
+            then return ()
+            else do
+                activePoint <- activePoints !! 0
+
+                datasetLabel <- activePoint ^. js "_model" ^. js "datasetLabel" >>= valToText
+                datasetIndex <- activePoint ^. js "_datasetIndex"               >>= (fmap floor . valToNumber)
+                label        <- activePoint ^. js "_model" ^. js "label"        >>= valToText
+                index'       <- activePoint ^. js "_index"                      >>= (fmap floor . valToNumber)
+
+                datasets <- chart ^. js "data" ^. js "datasets"
+                dataset  <- datasets !! datasetIndex
+                data'    <- dataset ^. js "data"
+                value    <- data' !! index' >>= valToNumber
+
+                let selection = ChartJsSelection
+                              { _chartJsSelection_datasetLabel = Just datasetLabel
+                              , _chartJsSelection_datasetIndex = Just datasetIndex
+                              , _chartJsSelection_label        = Just label
+                              , _chartJsSelection_index        = Just index'
+                              , _chartJsSelection_value        = Just value
+                              }
+                callback selection
+
+        return ()
+        )

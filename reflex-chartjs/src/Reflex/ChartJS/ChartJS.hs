@@ -124,9 +124,9 @@ chartjs callbacks
                             callbacks
             liftIO $ writeIORef chartJsRef (Just ref)
 
-            {-registerOnClick element_-}
-                            {-ref-}
-                            {-(onClick trigger)-}
+            registerOnClick element_
+                            ref
+                            (onClick trigger)
 
             return ()
 
@@ -141,15 +141,10 @@ chartjs callbacks
             return ()
 
 
-        {-onClick :: (ChartJsSelection -> IO ())-}
-                {--> JSVal-}
-                {--> IO ()-}
-        {-onClick trigger jsval_ = do-}
-            {-print ("onClick" :: String)-}
-            {-{-undefined-}-}
-            {-{-Just (json_ :: Text) <- fromJSVal jsval_-}-}
-            {-{-let Just (event :: ChartJsSelection) = Aeson.decodeStrict . encodeUtf8 $ json_-}-}
-            {-{---print event-}-}
-            {-{-trigger event-}-}
-            {-{-return ()-}-}
+        onClick :: (ChartJsSelection -> IO ())
+                -> ChartJsSelection
+                -> JSM ()
+        onClick trigger event = do
+            liftIO $ trigger event
+            return ()
 
